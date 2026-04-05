@@ -1,0 +1,1317 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>전지적 독자시점 — 팬게임</title>
+<meta name="description" content="나는 이 세계의 결말을 알고 있는 유일한 독자였다.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --gold:#f59e0b;--red:#ef4444;--purple:#a78bfa;--cyan:#22d3ee;
+  --bg:#06080f;--text:#e0dbd2;--muted:rgba(255,255,255,.45);
+}
+html,body{
+  width:100%;min-height:100vh;background:var(--bg);
+  font-family:'Noto Serif KR','Malgun Gothic',serif;
+  color:var(--text);overflow:hidden;
+}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes slideIn{from{opacity:0;transform:translateX(-12px)}to{opacity:1;transform:translateX(0)}}
+@keyframes twinkle{0%,100%{opacity:.1}50%{opacity:.45}}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+@keyframes scanline{0%{transform:translateY(-100%)}100%{transform:translateY(100vh)}}
+@keyframes constellationIn{from{opacity:0;transform:translateY(-20px) scale(.95)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes constellationOut{from{opacity:1}to{opacity:0;transform:translateY(-10px)}}
+@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+
+/* -- LAYOUT -- */
+#app{
+  max-width:780px;margin:0 auto;
+  min-height:100vh;display:flex;flex-direction:column;
+  position:relative;
+}
+#stars-layer{
+  position:fixed;inset:0;pointer-events:none;z-index:0;
+}
+.star{
+  position:absolute;border-radius:50%;background:#fff;
+  animation:twinkle 3s ease-in-out infinite;
+}
+
+/* -- HUD -- */
+#hud{
+  position:sticky;top:0;z-index:100;
+  padding:10px 20px;
+  background:linear-gradient(180deg,rgba(6,8,15,.98) 80%,transparent 100%);
+  display:flex;align-items:center;justify-content:space-between;
+  border-bottom:1px solid rgba(245,158,11,.1);
+  min-height:44px;
+}
+#hud-left{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--gold);letter-spacing:.08em;font-weight:700;}
+#hud-stats{display:flex;align-items:center;gap:14px;}
+.stat-pill{display:flex;align-items:center;gap:5px;font-size:10px;}
+.stat-track{width:44px;height:3px;background:rgba(255,255,255,.1);border-radius:2px;}
+.stat-fill{height:100%;border-radius:2px;transition:width .5s ease;}
+.coin-tag{font-size:11px;padding:2px 9px;border:1px solid rgba(34,211,238,.3);border-radius:3px;background:rgba(34,211,238,.06);color:var(--cyan);}
+#ep-info{font-size:10px;color:rgba(255,255,255,.2);letter-spacing:.1em;}
+
+/* -- MAIN AREA -- */
+#main{
+  flex:1;display:flex;flex-direction:column;
+  position:relative;z-index:10;
+}
+#scene-bg{
+  flex:1;min-height:180px;
+  display:flex;align-items:center;justify-content:center;
+  position:relative;overflow:hidden;
+}
+.bg-overlay{
+  position:absolute;inset:0;
+  transition:background 1.2s ease;
+}
+.bg-subway{background:radial-gradient(ellipse 70% 50% at 50% 30%,#0a1628 0%,#06080f 65%);}
+.bg-dark{background:radial-gradient(ellipse 70% 50% at 50% 30%,#1a0a2e 0%,#06080f 65%);}
+.bg-city{background:radial-gradient(ellipse 70% 50% at 50% 30%,#1a1408 0%,#06080f 65%);}
+.bg-battle{background:radial-gradient(ellipse 70% 50% at 50% 30%,#2e0a0a 0%,#06080f 65%);}
+.bg-palace{background:radial-gradient(ellipse 70% 50% at 50% 30%,#1a0a2e 0%,#0f0520 65%);}
+.bg-final{background:radial-gradient(ellipse 80% 60% at 50% 40%,#1a1a3e 0%,#06080f 50%);}
+.bg-clear{background:radial-gradient(ellipse 70% 50% at 50% 30%,#1a1a08 0%,#06080f 65%);}
+.scene-illus{
+  position:relative;z-index:1;
+  text-align:center;padding:40px 24px;
+  opacity:.18;font-size:72px;
+  user-select:none;pointer-events:none;
+  letter-spacing:.1em;
+}
+
+/* -- DIALOG -- */
+#dialog-wrap{
+  position:relative;z-index:10;
+  border-top:1px solid rgba(245,158,11,.15);
+  background:linear-gradient(180deg,rgba(6,8,15,.72) 0%,rgba(6,8,15,.97) 100%);
+  padding:22px 26px 18px;
+  cursor:pointer;min-height:164px;
+}
+#speaker-name{
+  display:inline-flex;align-items:center;
+  font-size:12px;font-weight:700;letter-spacing:.1em;
+  padding:3px 12px;border:1px solid;border-radius:2px;
+  margin-bottom:14px;background:rgba(0,0,0,.5);
+  transition:color .3s,border-color .3s;
+}
+#dialog-text{
+  font-size:15px;line-height:1.9;
+  color:var(--text);white-space:pre-wrap;
+  min-height:60px;transition:font-family .2s;
+}
+#cursor-blink{display:inline;animation:blink .7s step-end infinite;color:var(--gold);}
+#skip-hint{
+  font-size:10px;color:rgba(255,255,255,.16);
+  text-align:right;margin-top:8px;letter-spacing:.05em;
+  transition:opacity .3s;
+}
+
+/* -- CHOICES -- */
+#choices-wrap{
+  position:relative;z-index:10;
+  padding:6px 26px 28px;
+  background:rgba(6,8,15,.97);
+  display:none;flex-direction:column;gap:8px;
+}
+.choice-btn{
+  display:flex;align-items:center;gap:10px;
+  width:100%;text-align:left;
+  padding:12px 16px;
+  background:rgba(255,255,255,.025);
+  border:1px solid rgba(255,255,255,.1);
+  border-radius:3px;
+  color:#b5b0a8;font-size:14px;
+  cursor:pointer;font-family:inherit;
+  letter-spacing:.02em;
+  transition:background .15s,border-color .15s,color .15s,transform .12s;
+  animation:slideIn .25s ease both;
+}
+.choice-btn:hover{
+  background:rgba(245,158,11,.1);
+  border-color:var(--gold);
+  color:#fcd34d;transform:translateX(5px);
+}
+.choice-arrow{color:var(--gold);font-size:10px;flex-shrink:0;}
+.choice-fx{
+  margin-left:auto;font-size:10px;
+  color:rgba(255,255,255,.25);letter-spacing:.05em;flex-shrink:0;
+}
+
+/* -- CONSTELLATION POPUP -- */
+#constellation-popup{
+  display:none;
+  position:fixed;top:60px;left:50%;transform:translateX(-50%);
+  z-index:200;
+  max-width:420px;width:90%;
+  padding:14px 20px;
+  background:linear-gradient(135deg,rgba(167,139,250,.15) 0%,rgba(34,211,238,.1) 100%);
+  border:1px solid rgba(167,139,250,.3);
+  border-radius:6px;
+  backdrop-filter:blur(8px);
+  animation:constellationIn .4s ease;
+  text-align:center;
+}
+#constellation-popup.hiding{animation:constellationOut .3s ease forwards;}
+.const-msg{font-size:12px;color:var(--purple);line-height:1.7;letter-spacing:.03em;}
+.const-coin{font-size:11px;color:var(--cyan);margin-top:6px;}
+.const-favor{font-size:10px;color:rgba(255,255,255,.3);margin-top:4px;}
+
+/* -- TITLE -- */
+#title-screen{
+  display:none;flex-direction:column;
+  align-items:center;justify-content:center;
+  min-height:100vh;padding:48px 24px;text-align:center;
+  position:relative;z-index:10;
+  animation:fadeUp .6s ease;
+}
+.title-label{font-size:10px;letter-spacing:.35em;color:var(--gold);margin-bottom:14px;opacity:.75;}
+.title-main{
+  font-size:clamp(40px,9vw,72px);font-weight:900;
+  line-height:1.08;color:#fff;margin-bottom:8px;
+  letter-spacing:-.02em;
+  text-shadow:0 0 80px rgba(245,158,11,.2);
+}
+.title-en{font-size:11px;letter-spacing:.2em;color:rgba(255,255,255,.28);margin-bottom:30px;}
+.title-divider{width:40px;height:1px;background:rgba(245,158,11,.4);margin:0 auto 28px;}
+.title-quote{
+  font-size:14px;line-height:2;
+  color:rgba(255,255,255,.5);margin-bottom:48px;font-style:italic;
+}
+.orv-btn{
+  padding:13px 42px;background:transparent;
+  border:1px solid var(--gold);color:var(--gold);
+  font-size:13px;letter-spacing:.12em;cursor:pointer;
+  border-radius:2px;font-family:inherit;
+  transition:background .2s,box-shadow .2s,transform .1s;
+}
+.orv-btn:hover{background:rgba(245,158,11,.1);box-shadow:0 0 24px rgba(245,158,11,.18);}
+.orv-btn:active{transform:scale(.98);}
+.char-select-title{
+  font-size:12px;letter-spacing:.12em;color:rgba(255,255,255,.4);
+  margin-bottom:16px;margin-top:32px;
+}
+.char-cards{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-bottom:20px;}
+.char-card{
+  padding:14px 18px;border:1px solid rgba(255,255,255,.1);
+  border-radius:4px;background:rgba(255,255,255,.03);
+  cursor:pointer;min-width:130px;text-align:center;
+  transition:all .2s;position:relative;
+}
+.char-card:hover,.char-card.selected{
+  border-color:var(--gold);background:rgba(245,158,11,.08);
+  transform:translateY(-2px);
+}
+.char-card-name{font-size:14px;font-weight:700;margin-bottom:4px;}
+.char-card-desc{font-size:11px;color:rgba(255,255,255,.4);line-height:1.5;}
+.char-badge{
+  position:absolute;top:-6px;right:-6px;
+  font-size:9px;padding:2px 6px;border-radius:2px;
+  background:rgba(34,211,238,.15);border:1px solid rgba(34,211,238,.3);
+  color:var(--cyan);letter-spacing:.05em;
+}
+.legal-note{margin-top:24px;font-size:10px;color:rgba(255,255,255,.16);letter-spacing:.04em;}
+.true-end-hint{
+  margin-top:16px;font-size:11px;color:var(--purple);
+  letter-spacing:.05em;opacity:.7;
+  display:none;
+}
+
+/* -- CLEAR SCREEN -- */
+#clear-screen{
+  display:none;flex-direction:column;
+  align-items:center;justify-content:center;
+  min-height:100vh;padding:48px 24px;text-align:center;
+  position:relative;z-index:10;
+  animation:fadeUp .5s ease;
+}
+.clear-star{font-size:44px;color:var(--gold);margin-bottom:18px;animation:pulse 2s ease infinite;}
+.clear-ep{font-size:10px;letter-spacing:.25em;color:rgba(255,255,255,.3);margin-bottom:8px;}
+.clear-title{font-size:26px;font-weight:700;color:#fff;margin-bottom:22px;}
+.clear-msg{
+  font-size:13px;line-height:2;color:var(--cyan);
+  margin-bottom:32px;white-space:pre-wrap;font-family:monospace;
+  max-width:440px;
+}
+.stats-grid{display:flex;gap:32px;margin-bottom:40px;}
+.stat-card{display:flex;flex-direction:column;align-items:center;gap:5px;font-size:11px;color:rgba(255,255,255,.5);}
+.stat-val{font-size:26px;font-weight:700;}
+.ending-label{
+  font-size:11px;letter-spacing:.1em;
+  padding:4px 14px;border-radius:2px;
+  margin-bottom:28px;
+}
+.clear-buttons{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;}
+
+/* -- FOOTER -- */
+#footer-bar{
+  text-align:center;padding:12px;
+  font-size:10px;color:rgba(255,255,255,.12);
+  border-top:1px solid rgba(255,255,255,.05);
+  letter-spacing:.04em;position:relative;z-index:10;
+}
+
+/* -- MOBILE -- */
+@media(max-width:520px){
+  #dialog-wrap{padding:18px 18px 14px;}
+  #choices-wrap{padding:4px 18px 22px;}
+  .char-cards{gap:8px;}
+  .char-card{min-width:110px;padding:12px 14px;}
+  #hud{padding:8px 14px;}
+  #constellation-popup{max-width:92%;top:50px;}
+  .stats-grid{gap:20px;}
+}
+</style>
+</head>
+<body>
+
+<div id="stars-layer"></div>
+
+<div id="app">
+  <!-- CONSTELLATION POPUP -->
+  <div id="constellation-popup">
+    <div class="const-msg" id="const-msg"></div>
+    <div class="const-coin" id="const-coin"></div>
+    <div class="const-favor" id="const-favor"></div>
+  </div>
+
+  <!-- TITLE -->
+  <div id="title-screen">
+    <div class="title-label">OMNISCIENT READER'S VIEWPOINT</div>
+    <div class="title-main">전지적<br>독자시점</div>
+    <div class="title-en">팬 시뮬레이션 게임</div>
+    <div class="title-divider"></div>
+    <div class="title-quote">나는 이 세계의 결말을 알고 있는<br>유일한 독자였다.</div>
+    <div class="char-select-title">-- 플레이어블 캐릭터 선택 --</div>
+    <div class="char-cards" id="char-cards"></div>
+    <button class="orv-btn" id="start-btn">이야기 시작하기</button>
+    <div class="true-end-hint" id="true-end-hint">모든 캐릭터 클리어 시 진 엔딩 해금</div>
+    <div class="legal-note">팬게임 . 비상업 목적 제작 . 원작: 싱숑 작가 / 네이버시리즈</div>
+  </div>
+
+  <!-- GAME -->
+  <div id="game-screen" style="display:none;flex-direction:column;flex:1;">
+    <!-- HUD -->
+    <div id="hud">
+      <div id="hud-left">ORV</div>
+      <div id="ep-info">EP.1</div>
+      <div id="hud-stats">
+        <div class="stat-pill">
+          <span style="color:var(--gold);font-size:10px">신뢰도</span>
+          <div class="stat-track"><div class="stat-fill" id="bar-trust" style="background:var(--gold);box-shadow:0 0 4px #f59e0b66"></div></div>
+          <span style="color:var(--gold);font-size:10px" id="val-trust">0</span>
+        </div>
+        <div class="stat-pill">
+          <span style="color:var(--purple);font-size:10px">설화</span>
+          <div class="stat-track"><div class="stat-fill" id="bar-seolhwa" style="background:var(--purple);box-shadow:0 0 4px #a78bfa66"></div></div>
+          <span style="color:var(--purple);font-size:10px" id="val-seolhwa">0</span>
+        </div>
+        <div class="coin-tag" id="val-coin">◈ 100</div>
+      </div>
+    </div>
+
+    <!-- MAIN -->
+    <div id="main">
+      <div id="scene-bg">
+        <div class="bg-overlay bg-dark" id="bg-overlay"></div>
+        <div class="scene-illus" id="scene-illus">📖</div>
+      </div>
+      <div id="dialog-wrap" onclick="skipTyping()">
+        <div id="speaker-name"></div>
+        <div id="dialog-text"></div>
+        <div id="skip-hint">클릭하여 건너뛰기</div>
+      </div>
+      <div id="choices-wrap"></div>
+    </div>
+    <div id="footer-bar">전지적 독자시점 팬게임 . 원작: 싱숑</div>
+  </div>
+
+  <!-- CLEAR -->
+  <div id="clear-screen">
+    <div class="clear-star">★</div>
+    <div class="clear-ep" id="clear-ep-label">EPISODE 1</div>
+    <div class="clear-title" id="clear-title">클리어!</div>
+    <div class="clear-msg" id="clear-msg"></div>
+    <div id="ending-badge" class="ending-label"></div>
+    <div class="stats-grid">
+      <div class="stat-card"><span style="color:var(--gold)">신뢰도</span><span class="stat-val" style="color:var(--gold)" id="final-trust">0</span></div>
+      <div class="stat-card"><span style="color:var(--purple)">설화</span><span class="stat-val" style="color:var(--purple)" id="final-seolhwa">0</span></div>
+      <div class="stat-card"><span style="color:var(--cyan)">코인</span><span class="stat-val" style="color:var(--cyan)" id="final-coin">100</span></div>
+    </div>
+    <div class="clear-buttons">
+      <button class="orv-btn" id="next-ep-btn" style="display:none;">다음 에피소드 ▶</button>
+      <button class="orv-btn" id="retry-btn">처음부터 다시</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// =======================================
+// DATA
+// =======================================
+const CHARS = {
+  dokja:     { name:'김독자',   col:'#f59e0b', desc:'유일한 독자\n전략형 . 제4의 벽',  illus:'📖', style:'전략/메타' },
+  joonghyuk: { name:'유중혁',   col:'#ef4444', desc:'회귀자\n전투형 . 압도적 무력', illus:'⚔️', style:'전투/독주' },
+  sooyoung:  { name:'한수영',   col:'#a78bfa', desc:'천재 작가\n설화형 . 이야기 무기화', illus:'✒️', style:'설화/창작' },
+};
+
+// --- CONSTELLATION MESSAGES ---
+const CONSTELLATIONS = [
+  {msg:'성좌 「비밀 수렵자」가 당신의 선택을 흥미롭게 지켜봅니다.', coin:0},
+  {msg:'성좌 「지독한 평론가」가 코인을 후원합니다.', coin:15},
+  {msg:'성좌들이 술렁입니다.', coin:0},
+  {msg:'성좌 「끝까지 보는 자」가 격렬히 응원합니다.', coin:10},
+  {msg:'성좌 「타락한 사도」가 불만을 표합니다.', coin:0},
+  {msg:'성좌 「어둠의 재판관」이 판결을 내립니다.', coin:5},
+  {msg:'성좌 「디펜스 마스터」가 당신의 전략을 높이 평가합니다.', coin:20},
+  {msg:'성좌 「심연의 흑염룡」이 조용히 웃습니다.', coin:0},
+  {msg:'성좌 「처음부터 보던 자」가 눈물을 흘립니다.', coin:10},
+  {msg:'성좌 「전지적 독자시점」이 이 이야기를 기록합니다.', coin:25},
+  {msg:'성좌 「양심적 징병거부자」가 평화를 바랍니다.', coin:5},
+  {msg:'성좌 「가장 오래된 꿈」이 당신을 바라봅니다.', coin:30},
+];
+
+// =======================================
+// SCENES: 김독자
+// =======================================
+const SCENES_DOKJA = {
+  // === EP.1: 지하철 ===
+  s0:{sp:'narrator',illus:'🚃',bg:'subway',
+    txt:'2026년 3월 28일. 퇴근길 불광행 지하철 3807칸.\n\n나는 오늘도 소설을 읽고 있었다.',
+    ch:[{t:'계속하기 ▶',n:'s1',fx:{}}]},
+  s1:{sp:'dokja',illus:'📱',bg:'subway',
+    txt:'《멸망한 세계에서 살아남는 세 가지 방법》\n\n3149화.  完.\n\n14년. 드디어 끝났다.',
+    ch:[{t:'계속하기 ▶',n:'s2',fx:{}}]},
+  s2:{sp:'dokja',illus:'📱',bg:'subway',
+    txt:'작가 tls123. 나만 알아봐 주던 그 소설이.\n\n이제 진짜 끝이 났다.\n\n...... 고마웠어.',
+    ch:[{t:'계속하기 ▶',n:'s3',fx:{}}]},
+  s3:{sp:'system',illus:'⚡',bg:'dark',
+    txt:'【 스타 스트림에 오신 것을 환영합니다 】\n\n【 유료 서비스가 시작됩니다 】\n\n【 생존자에게 코인이 지급됩니다 】',
+    ch:[{t:'......?',n:'s4',fx:{}}]},
+  s4:{sp:'narrator',illus:'🌌',bg:'dark',
+    txt:'하나의 세계가 멸망하고, 새로운 세계가 태어나고 있었다.\n\n그리고 나는 이 세계의 결말을 알고 있는 유일한 독자였다.',
+    ch:[{t:'【제4의 벽】을 세운다',n:'s5',fx:{seolhwa:5}}]},
+  s5:{sp:'dokja',illus:'🧱',bg:'dark',
+    txt:'【제4의 벽】 발동.\n\n공황이 오지 않는다. 나는 이 이야기를 알고 있다.\n\n멸살법 1화. 정확히 이 순간이었다.',
+    ch:[{t:'계속하기 ▶',n:'s6',fx:{}}]},
+  s6:{sp:'narrator',illus:'👤',bg:'dark',
+    txt:'지하철 반대편 끝.\n\n흑발의 남자가 홀로 서 있었다.\n\n압도적인 존재감. 세상이 끝났는데도 흔들리지 않는 눈빛.',
+    ch:[{t:'계속하기 ▶',n:'s7',fx:{}}]},
+  s7:{sp:'joonghyuk',illus:'⚔️',bg:'dark',
+    txt:'물러서.',
+    ch:[
+      {t:'그에게 다가간다',           n:'s8a',fx:{trust:10},   hint:'+신뢰도 10'},
+      {t:'거리를 유지한다',           n:'s8b',fx:{coin:50},    hint:'+코인 50'},
+      {t:'"멸살법 읽었어요!" 외친다', n:'s8c',fx:{trust:20,seolhwa:5},hint:'+신뢰도 20 +설화 5'},
+    ]},
+  s8a:{sp:'dokja',illus:'👥',bg:'dark',
+    txt:'...... 유중혁 씨.\n\n저, 당신 알아요.',
+    ch:[{t:'계속하기 ▶',n:'s9a',fx:{}}]},
+  s9a:{sp:'joonghyuk',illus:'⚔️',bg:'dark',
+    txt:'......\n\n뭐?\n\n(그의 눈이 가늘어진다.)',
+    ch:[{t:'계속하기 ▶',n:'s10',fx:{}}]},
+  s8b:{sp:'dokja',illus:'👤',bg:'dark',
+    txt:'(......)\n\n(지금 그에게 다가가는 건 위험하다.)\n\n(이 회차의 유중혁은 아직 불안정하다. 멸살법에서 배웠다.)',
+    ch:[{t:'계속하기 ▶',n:'s10',fx:{}}]},
+  s8c:{sp:'dokja',illus:'📖',bg:'dark',
+    txt:'당신——멸살법의 주인공이잖아요!\n\n회귀자 유중혁!',
+    ch:[{t:'계속하기 ▶',n:'s9c',fx:{}}]},
+  s9c:{sp:'joonghyuk',illus:'⚔️',bg:'dark',
+    txt:'......\n\n(긴 침묵.)\n\n누구냐. 너.',
+    ch:[{t:'계속하기 ▶',n:'s10',fx:{}}]},
+  s10:{sp:'narrator',illus:'👦',bg:'dark',
+    txt:'좌석 아래에서 작은 기침 소리가 들렸다.\n\n스냅백을 쓴 어린 소년이 떨며 웅크리고 있었다.',
+    ch:[
+      {t:'소년을 데려간다',   n:'s11a',fx:{trust:15},hint:'+신뢰도 15'},
+      {t:'모른 척 지나친다',  n:'s11b',fx:{coin:30}, hint:'+코인 30'},
+    ]},
+  s11a:{sp:'dokja',illus:'🤝',bg:'dark',
+    txt:'야. 거기 꼬마.\n\n일어나. 나랑 같이 가자.',
+    ch:[{t:'계속하기 ▶',n:'s12a',fx:{}}]},
+  s12a:{sp:'system',illus:'⭐',bg:'dark',
+    txt:'【 이길영이 파티에 합류했습니다 】\n\n훗날 충왕(蟲王)이 될 소년.\n\n그 이야기가 지금 시작된다.',
+    ch:[{t:'Episode 1 클리어 ▶',n:'ca',fx:{seolhwa:10}}]},
+  s11b:{sp:'dokja',illus:'🚶',bg:'dark',
+    txt:'(......)\n\n(나는 그 아이에게서 눈을 뗐다.)\n\n(이후 이길영은 혼자 살아남았다. 멸살법에는 없던 이야기로.)',
+    ch:[{t:'Episode 1 클리어 ▶',n:'cb',fx:{}}]},
+
+  // EP.1 ENDINGS (intermediate)
+  ca:{clr:true,ending:'동료 엔딩',ep:1,next:'e2_start',
+    txt:'【 Episode 1 클리어 】\n\n동료와 함께하는 독자.\n이야기의 주인공이 되는 길.',
+    col:'#f59e0b',badge:'COMPANION ROUTE'},
+  cb:{clr:true,ending:'고독 엔딩',ep:1,next:'e2_start',
+    txt:'【 Episode 1 클리어 】\n\n홀로 나아가는 독자.\n또 다른 결말이 기다리고 있다.',
+    col:'#94a3b8',badge:'SOLITARY ROUTE'},
+
+  // === EP.2: 충무로역 ===
+  e2_start:{sp:'narrator',illus:'🏢',bg:'city',
+    txt:'충무로역.\n\n세계가 변한 지 사흘째.\n\n독자는 공필두가 지배하는 영역 앞에 서 있었다.',
+    ch:[{t:'계속하기 ▶',n:'e2_pildu',fx:{}}]},
+  e2_pildu:{sp:'narrator',illus:'🏰',bg:'city',
+    txt:'그린 존을 독점한 건물주 연합의 수장, 공필두.\n\n멸살법에선 십악의 하나였지만——\n\n지금 이 순간의 그는 아직 선택하지 않았다.',
+    ch:[{t:'계속하기 ▶',n:'e2_choice',fx:{}}]},
+  e2_choice:{sp:'dokja',illus:'🤔',bg:'city',
+    txt:'(공필두를 설득할 방법이 필요하다.)\n\n(멸살법에서 그는 결국 독자의 편이 됐다.)\n\n(어떻게 접근할까.)',
+    ch:[
+      {t:'디펜스 마스터의 후원 사실을 언급한다', n:'e2_a',fx:{trust:20},hint:'+신뢰도 20'},
+      {t:'그린 존 공유를 제안한다',              n:'e2_b',fx:{coin:-30,trust:10},hint:'코인 -30 +신뢰도 10'},
+      {t:'침묵한다 — 때를 기다린다',            n:'e2_c',fx:{seolhwa:8},hint:'+설화 8'},
+    ]},
+  e2_a:{sp:'dokja',illus:'💬',bg:'city',
+    txt:'당신의 배후성——디펜스 마스터죠.\n\n그 성흔, 지금 여기서 쓸 수 있습니다.\n\n저는 그 방법을 알아요.',
+    ch:[{t:'계속하기 ▶',n:'e2_pildu_react',fx:{}}]},
+  e2_b:{sp:'dokja',illus:'🤝',bg:'city',
+    txt:'그린 존을 반으로 나눕시다.\n\n싸우면 둘 다 손해예요.\n\n저한테 딱 하나만 양보하면, 당신이 더 얻어요.',
+    ch:[{t:'계속하기 ▶',n:'e2_pildu_react',fx:{}}]},
+  e2_c:{sp:'dokja',illus:'🕰️',bg:'city',
+    txt:'(......)\n\n(말 없이 공필두의 눈을 마주쳤다.)\n\n(이 사람은 결국 정에 이끌리는 타입이다. 서두르면 안 된다.)',
+    ch:[{t:'계속하기 ▶',n:'e2_pildu_react',fx:{}}]},
+  e2_pildu_react:{sp:'narrator',illus:'🏰',bg:'city',
+    txt:'공필두는 잠시 독자를 바라봤다.\n\n......그리고 천천히 입을 열었다.',
+    ch:[{t:'계속하기 ▶',n:'e2_clear',fx:{trust:5}}]},
+  e2_clear:{sp:'system',illus:'⭐',bg:'city',
+    txt:'【 공필두와의 교섭이 시작됩니다 】\n\n툴툴대면서도 당신 곁에 있을 남자.\n\n그 인연이 지금 시작된다.',
+    ch:[{t:'Episode 2 클리어 ▶',n:'cc',fx:{seolhwa:8}}]},
+  cc:{clr:true,ending:'교섭 엔딩',ep:2,next:'e3_start',
+    txt:'【 Episode 2 클리어 】\n\n공필두와의 동맹.\n건물주 연합이 당신의 편이 됐다.',
+    col:'#22d3ee',badge:'ALLIANCE ROUTE'},
+
+  // === EP.3: 깃발 쟁탈전 ===
+  e3_start:{sp:'narrator',illus:'🚩',bg:'battle',
+    txt:'대형마트 일대.\n\n각 그룹이 깃발을 세우고 영역을 주장하기 시작했다.\n\n스타 스트림의 네 번째 시나리오——깃발 쟁탈전.',
+    ch:[{t:'계속하기 ▶',n:'e3_s1',fx:{}}]},
+  e3_s1:{sp:'system',illus:'⚡',bg:'battle',
+    txt:'【 메인 시나리오 #4 — 깃발 쟁탈전 】\n\n깃발을 세우고 영역을 사수하십시오.\n\n최후의 1팀이 보상을 획득합니다.',
+    ch:[{t:'계속하기 ▶',n:'e3_s2',fx:{}}]},
+  e3_s2:{sp:'dokja',illus:'🤔',bg:'battle',
+    txt:'(......멸살법에서 이 시나리오의 핵심은 전투가 아니었다.)\n\n(동맹과 배신. 그것이 진짜 승부처다.)\n\n(어떻게 할까.)',
+    ch:[
+      {t:'이지혜의 리더십에 맡긴다',     n:'e3_a',fx:{trust:15,seolhwa:5},hint:'+신뢰도 15 +설화 5'},
+      {t:'직접 전략을 세운다',           n:'e3_b',fx:{seolhwa:12},hint:'+설화 12'},
+      {t:'유중혁에게 선봉을 부탁한다',    n:'e3_c',fx:{trust:10,coin:20},hint:'+신뢰도 10 +코인 20'},
+    ]},
+  e3_a:{sp:'dokja',illus:'👥',bg:'battle',
+    txt:'이지혜 씨. 당신이 지휘해 주세요.\n\n당신은 원래 이런 것에 재능이 있는 사람이니까.',
+    ch:[{t:'계속하기 ▶',n:'e3_react',fx:{}}]},
+  e3_b:{sp:'dokja',illus:'📖',bg:'battle',
+    txt:'멸살법 312화. 이 시나리오에서 최적의 전략은——\n\n적의 깃발을 빼앗는 게 아니라, 모든 깃발의 위치를 먼저 파악하는 것이다.',
+    ch:[{t:'계속하기 ▶',n:'e3_react',fx:{}}]},
+  e3_c:{sp:'dokja',illus:'⚔️',bg:'battle',
+    txt:'유중혁 씨. 앞은 당신이 맡아줘요.\n\n뒤는 내가 볼게.',
+    ch:[{t:'계속하기 ▶',n:'e3_react',fx:{}}]},
+  e3_react:{sp:'narrator',illus:'🏴',bg:'battle',
+    txt:'혼란 속에서도 김독자의 팀은 깃발을 지켜냈다.\n\n멸살법을 아는 자의 전략은 현실에서도 통했다.',
+    ch:[{t:'계속하기 ▶',n:'e3_final',fx:{trust:5}}]},
+  e3_final:{sp:'system',illus:'⭐',bg:'battle',
+    txt:'【 깃발 쟁탈전 클리어 】\n\n당신의 깃발이 최후까지 남았습니다.\n\n동료들의 눈빛이 달라졌다.',
+    ch:[{t:'Episode 3 클리어 ▶',n:'cd',fx:{seolhwa:10}}]},
+  cd:{clr:true,ending:'전략가 엔딩',ep:3,next:'e4_start',
+    txt:'【 Episode 3 클리어 】\n\n깃발 쟁탈전 승리.\n독자의 전략이 팀을 이끌었다.',
+    col:'#f59e0b',badge:'STRATEGIST'},
+
+  // === EP.4: 왕들의 전쟁 ===
+  e4_start:{sp:'narrator',illus:'👑',bg:'palace',
+    txt:'여의도.\n\n각 세력의 수장들이 「왕」의 칭호를 걸고 충돌하기 시작했다.\n\n스타 스트림 역사상 가장 잔혹한 시나리오가 시작된다.',
+    ch:[{t:'계속하기 ▶',n:'e4_s1',fx:{}}]},
+  e4_s1:{sp:'system',illus:'⚡',bg:'palace',
+    txt:'【 히든 시나리오 — 왕들의 전쟁 】\n\n왕이 되거나, 왕 아래 서거나, 왕을 쓰러뜨리십시오.\n\n선택의 시간입니다.',
+    ch:[{t:'계속하기 ▶',n:'e4_s2',fx:{}}]},
+  e4_s2:{sp:'dokja',illus:'🤔',bg:'palace',
+    txt:'(멸살법에서 이 시나리오를 클리어한 방법은 하나뿐이었다.)\n\n(유중혁이 모든 왕을 쓰러뜨렸다.)\n\n(하지만 이번엔——내가 다른 길을 만들 수 있다.)',
+    ch:[
+      {t:'왕이 된다 — 독자왕',           n:'e4_a',fx:{seolhwa:15,trust:5},hint:'+설화 15 +신뢰도 5'},
+      {t:'유중혁을 왕으로 세운다',         n:'e4_b',fx:{trust:20},hint:'+신뢰도 20'},
+      {t:'왕의 자리를 거부한다',           n:'e4_c',fx:{seolhwa:10,coin:30},hint:'+설화 10 +코인 30'},
+    ]},
+  e4_a:{sp:'dokja',illus:'👑',bg:'palace',
+    txt:'내가 왕이 되겠다.\n\n이 이야기의 결말을 아는 건 나뿐이니까.\n\n그 무게를 내가 지겠다.',
+    ch:[{t:'계속하기 ▶',n:'e4_react',fx:{}}]},
+  e4_b:{sp:'dokja',illus:'⚔️',bg:'palace',
+    txt:'유중혁 씨, 이건 당신의 무대예요.\n\n멸살법에서도 그랬고——이 세계에서도 그래야 해요.\n\n왕은 당신이에요.',
+    ch:[{t:'계속하기 ▶',n:'e4_react',fx:{}}]},
+  e4_c:{sp:'dokja',illus:'📖',bg:'palace',
+    txt:'왕 같은 건 필요 없어.\n\n나는 독자야. 왕이 아니라 이야기를 읽는 자.\n\n그게 내 역할이다.',
+    ch:[{t:'계속하기 ▶',n:'e4_react',fx:{}}]},
+  e4_react:{sp:'narrator',illus:'🌟',bg:'palace',
+    txt:'왕들의 전쟁이 끝났다.\n\n피와 서사가 뒤엉킨 밤.\n\n김독자는 자신만의 답을 찾았다.',
+    ch:[{t:'계속하기 ▶',n:'e4_final',fx:{trust:5}}]},
+  e4_final:{sp:'system',illus:'⭐',bg:'palace',
+    txt:'【 왕들의 전쟁 종결 】\n\n성좌들이 당신의 이름을 부릅니다.\n\n다음 시나리오가 곧 시작됩니다.',
+    ch:[{t:'Episode 4 클리어 ▶',n:'ce',fx:{seolhwa:12}}]},
+  ce:{clr:true,ending:'서사왕 엔딩',ep:4,next:'e5_start',
+    txt:'【 Episode 4 클리어 】\n\n왕들의 전쟁을 넘어선 자.\n이야기의 무게가 당신의 어깨 위에 있다.',
+    col:'#a78bfa',badge:'STORY KING'},
+
+  // === EP.5: 최종 시나리오 ===
+  e5_start:{sp:'narrator',illus:'🌌',bg:'final',
+    txt:'스타 스트림 최종 영역.\n\n모든 시나리오가 이곳으로 수렴한다.\n\n김독자는 소설의 마지막 장을 펼쳤다.',
+    ch:[{t:'계속하기 ▶',n:'e5_s1',fx:{}}]},
+  e5_s1:{sp:'system',illus:'⚡',bg:'final',
+    txt:'【 최종 시나리오 】\n\n이 세계의 결말을 선택하십시오.\n\n모든 선택의 무게가 여기에 모였습니다.',
+    ch:[{t:'계속하기 ▶',n:'e5_s2',fx:{}}]},
+  e5_s2:{sp:'dokja',illus:'📖',bg:'final',
+    txt:'(멸살법의 결말. 나만 아는 그 엔딩.)\n\n(하지만 이 세계는 소설이 아니다.)\n\n(지금 여기서, 내가 새로운 결말을 쓸 수 있다.)',
+    ch:[
+      {t:'동료들과 함께 결말을 맞는다',       n:'e5_a',fx:{trust:25},hint:'+신뢰도 25'},
+      {t:'【제4의 벽】로 결말을 바꾼다',      n:'e5_b',fx:{seolhwa:20,coin:-50},hint:'+설화 20 코인 -50'},
+      {t:'혼자 모든 것을 떠안는다',           n:'e5_c',fx:{seolhwa:15},hint:'+설화 15'},
+    ]},
+  e5_a:{sp:'dokja',illus:'👥',bg:'final',
+    txt:'......이번엔 혼자가 아니야.\n\n유중혁. 한수영. 이지혜. 이길영. 공필두.\n\n우리 모두의 이야기로 끝내자.',
+    ch:[{t:'계속하기 ▶',n:'e5_react',fx:{trust:10}}]},
+  e5_b:{sp:'dokja',illus:'🧱',bg:'final',
+    txt:'【제4의 벽】——최대 출력.\n\n이 이야기의 결말은 나 혼자 바꿀 수 없다.\n\n하지만 독자만이 할 수 있는 일이 있다. 이야기를 기억하는 것.',
+    ch:[{t:'계속하기 ▶',n:'e5_react',fx:{seolhwa:5}}]},
+  e5_c:{sp:'dokja',illus:'📖',bg:'final',
+    txt:'(......)\n\n(나는 이 이야기를 읽은 유일한 독자다.)\n\n(결말의 무게는 내가 지겠다. 아무도 다치지 않게.)',
+    ch:[{t:'계속하기 ▶',n:'e5_react',fx:{}}]},
+  e5_react:{sp:'narrator',illus:'🌟',bg:'final',
+    txt:'빛이 세계를 감쌌다.\n\n스타 스트림의 마지막 메시지가 울려 퍼졌다.\n\n이것이 독자의 이야기——그 결말.',
+    ch:[{t:'계속하기 ▶',n:'e5_final',fx:{}}]},
+  e5_final:{sp:'system',illus:'⭐',bg:'final',
+    txt:'【 최종 시나리오 클리어 】\n\n김독자. 가장 평범한 독자.\n\n그러나 이 세계를 가장 깊이 사랑한 자.',
+    ch:[{t:'김독자 루트 클리어 ▶',n:'cf',fx:{seolhwa:15}}]},
+  cf:{clr:true,ending:'독자 엔딩',ep:5,
+    txt:'【 김독자 루트 완결 】\n\n전지적 독자시점.\n그것은 세계를 읽는 자의 이야기였다.\n\n★ 스타 스트림이 당신의 이야기에 경의를 표합니다 ★',
+    col:'#f59e0b',badge:'THE READER'},
+};
+
+// =======================================
+// SCENES: 유중혁
+// =======================================
+const SCENES_JH = {
+  // === EP.1 ===
+  s0:{sp:'narrator',illus:'🚃',bg:'subway',
+    txt:'회귀. 또 다시.\n\n1863회차. 유중혁은 익숙한 지하철에서 눈을 떴다.\n\n세상이 또 끝나고 있었다.',
+    ch:[{t:'계속하기 ▶',n:'s1',fx:{}}]},
+  s1:{sp:'joonghyuk',illus:'⚔️',bg:'subway',
+    txt:'...... 또야.\n\n(매 회차. 매번 처음부터.)\n\n(하지만 이번엔 뭔가 다르다. 저 남자——저 독자가.)',
+    ch:[{t:'계속하기 ▶',n:'s2',fx:{}}]},
+  s2:{sp:'narrator',illus:'👤',bg:'dark',
+    txt:'건너편에서 평범한 얼굴의 남자가 조용히 소설을 덮었다.\n\n그리고 유중혁을 똑바로 바라봤다.',
+    ch:[{t:'계속하기 ▶',n:'s3',fx:{}}]},
+  s3:{sp:'joonghyuk',illus:'👁️',bg:'dark',
+    txt:'(......)\n\n(공황도 없다. 두려움도 없다. 저 눈빛——)\n\n(이 세계의 흐름을 알고 있는 자의 눈이다.)',
+    ch:[
+      {t:'경계한다 — 적일 수도 있다',      n:'s4a',fx:{},       hint:''},
+      {t:'다가간다 — 저 자를 파악한다',    n:'s4b',fx:{trust:10},hint:'+신뢰도 10'},
+    ]},
+  s4a:{sp:'joonghyuk',illus:'⚔️',bg:'dark',
+    txt:'물러서.\n\n(아직은 믿을 수 없다.)',
+    ch:[{t:'계속하기 ▶',n:'s5',fx:{}}]},
+  s4b:{sp:'joonghyuk',illus:'👥',bg:'dark',
+    txt:'......너.\n\n이 세계를 알고 있나.\n\n(직접 확인하는 게 빠르다.)',
+    ch:[{t:'계속하기 ▶',n:'s5',fx:{}}]},
+  s5:{sp:'system',illus:'⚡',bg:'dark',
+    txt:'【 메인 시나리오 #1 】\n\n첫 번째 시나리오가 시작됩니다.\n\n어떻게 클리어하시겠습니까?',
+    ch:[
+      {t:'혼자 클리어한다',             n:'s6a',fx:{},          hint:'패왕 루트'},
+      {t:'저 독자와 협력한다',          n:'s6b',fx:{trust:15},  hint:'+신뢰도 15'},
+    ]},
+  s6a:{sp:'joonghyuk',illus:'⚔️',bg:'dark',
+    txt:'필요 없어.\n\n(이미 수백 번 혼자 해왔다.)\n\n(그게 가장 빠른 방법이다.)',
+    ch:[{t:'계속하기 ▶',n:'ja',fx:{}}]},
+  s6b:{sp:'joonghyuk',illus:'👥',bg:'dark',
+    txt:'......\n\n(그 독자의 눈빛이 걸린다.)\n\n네가 뭘 알고 있든——따라와.',
+    ch:[{t:'계속하기 ▶',n:'jb',fx:{seolhwa:5}}]},
+  ja:{clr:true,ending:'패왕 엔딩',ep:1,next:'j2_start',
+    txt:'【 Episode 1 클리어 】\n\n혼자서. 언제나처럼.\n군림하되 지배하지 않는 자의 길.',
+    col:'#ef4444',badge:'OVERLORD ROUTE'},
+  jb:{clr:true,ending:'동료 엔딩',ep:1,next:'j2_start',
+    txt:'【 Episode 1 클리어 】\n\n처음으로 등을 맡긴 자.\n1863회차의 유중혁이 처음으로 선택한 것.',
+    col:'#f59e0b',badge:'COMPANION ROUTE'},
+
+  // === EP.2: 불신의 벽 ===
+  j2_start:{sp:'narrator',illus:'🏢',bg:'city',
+    txt:'시나리오가 진행될수록 사람들이 모여들었다.\n\n이지혜. 공필두. 한수영.\n\n유중혁의 주변이 처음으로 복잡해졌다.',
+    ch:[{t:'계속하기 ▶',n:'j2_s1',fx:{}}]},
+  j2_s1:{sp:'joonghyuk',illus:'⚔️',bg:'city',
+    txt:'(......이전 회차에선 이 시점에서 대부분 죽었다.)\n\n(하지만 이번 회차엔 저 독자가 있다.)\n\n(믿어도 되는 건가.)',
+    ch:[
+      {t:'아직 믿지 않는다',             n:'j2_a',fx:{seolhwa:8},hint:'+설화 8'},
+      {t:'김독자를 신뢰한다',            n:'j2_b',fx:{trust:18},hint:'+신뢰도 18'},
+      {t:'시험해 본다',                  n:'j2_c',fx:{trust:8,seolhwa:5},hint:'+신뢰도 8 +설화 5'},
+    ]},
+  j2_a:{sp:'joonghyuk',illus:'⚔️',bg:'city',
+    txt:'(아직이다.)\n\n(수백 회차 동안 배운 것이 있다면, 사람은 쉽게 변한다는 것.)\n\n(조금 더 지켜보겠다.)',
+    ch:[{t:'계속하기 ▶',n:'j2_react',fx:{}}]},
+  j2_b:{sp:'joonghyuk',illus:'👥',bg:'city',
+    txt:'......김독자.\n\n네 말대로 해 보겠다.\n\n(이번 한 번만.)',
+    ch:[{t:'계속하기 ▶',n:'j2_react',fx:{}}]},
+  j2_c:{sp:'joonghyuk',illus:'👁️',bg:'city',
+    txt:'김독자. 다음 시나리오의 내용을 말해 봐.\n\n네가 정말 미래를 안다면.\n\n(증명해 봐.)',
+    ch:[{t:'계속하기 ▶',n:'j2_react',fx:{}}]},
+  j2_react:{sp:'narrator',illus:'🌃',bg:'city',
+    txt:'유중혁의 눈에서 처음으로 경계 이외의 감정이 스쳤다.\n\n그것이 무엇인지는 아직 알 수 없었다.',
+    ch:[{t:'계속하기 ▶',n:'j2_final',fx:{trust:5}}]},
+  j2_final:{sp:'system',illus:'⭐',bg:'city',
+    txt:'【 불신의 벽이 균열을 보입니다 】\n\n1863번의 회귀. 그 벽이 처음으로 흔들렸다.',
+    ch:[{t:'Episode 2 클리어 ▶',n:'jc',fx:{seolhwa:8}}]},
+  jc:{clr:true,ending:'균열 엔딩',ep:2,next:'j3_start',
+    txt:'【 Episode 2 클리어 】\n\n불신의 벽에 금이 가다.\n회귀자의 고독이 흔들리는 순간.',
+    col:'#f59e0b',badge:'CRACKED WALL'},
+
+  // === EP.3: 회귀자의 기억 ===
+  j3_start:{sp:'narrator',illus:'🧠',bg:'dark',
+    txt:'깃발 쟁탈전이 끝난 밤.\n\n유중혁은 홀로 달을 바라보고 있었다.\n\n1863번의 기억이 밀려왔다.',
+    ch:[{t:'계속하기 ▶',n:'j3_s1',fx:{}}]},
+  j3_s1:{sp:'joonghyuk',illus:'⚔️',bg:'dark',
+    txt:'(기억해선 안 되는 것들이 있다.)\n\n(죽어간 사람들. 구하지 못한 사람들.)\n\n(하지만 이 기억이 없으면 나는 아무것도 아니다.)',
+    ch:[
+      {t:'기억을 직시한다',              n:'j3_a',fx:{trust:12,seolhwa:8},hint:'+신뢰도 12 +설화 8'},
+      {t:'기억을 잠근다',               n:'j3_b',fx:{seolhwa:15},hint:'+설화 15'},
+      {t:'김독자에게 이야기한다',         n:'j3_c',fx:{trust:20},hint:'+신뢰도 20'},
+    ]},
+  j3_a:{sp:'joonghyuk',illus:'👁️',bg:'dark',
+    txt:'(......좋다. 전부 기억하겠다.)\n\n(그래야 이번 회차에서 같은 실수를 반복하지 않는다.)\n\n(그것이 내가 할 수 있는 유일한 것이다.)',
+    ch:[{t:'계속하기 ▶',n:'j3_react',fx:{}}]},
+  j3_b:{sp:'joonghyuk',illus:'⚔️',bg:'dark',
+    txt:'(잊어.)\n\n(감정은 전투에서 약점이 된다.)\n\n(나는 도구다. 이 세계를 클리어하기 위한 도구.)',
+    ch:[{t:'계속하기 ▶',n:'j3_react',fx:{}}]},
+  j3_c:{sp:'joonghyuk',illus:'👥',bg:'dark',
+    txt:'......김독자.\n\n나는 1863번 죽었다가 살아났다.\n\n네가 그 소설을 읽었다면——내가 뭘 잃었는지 알겠지.',
+    ch:[{t:'계속하기 ▶',n:'j3_react',fx:{}}]},
+  j3_react:{sp:'narrator',illus:'🌙',bg:'dark',
+    txt:'달빛 아래, 회귀자의 그림자가 길게 늘어졌다.\n\n1863번의 무게. 그 안에서 피어나는 것이 있었다.',
+    ch:[{t:'계속하기 ▶',n:'j3_final',fx:{trust:5}}]},
+  j3_final:{sp:'system',illus:'⭐',bg:'dark',
+    txt:'【 회귀자의 기억이 변하고 있습니다 】\n\n기억은 짐이 아니라 무기가 될 수 있다.',
+    ch:[{t:'Episode 3 클리어 ▶',n:'jd',fx:{seolhwa:10}}]},
+  jd:{clr:true,ending:'기억의 무게 엔딩',ep:3,next:'j4_start',
+    txt:'【 Episode 3 클리어 】\n\n1863번의 기억을 짊어진 자.\n그 무게가 처음으로 의미를 가졌다.',
+    col:'#a78bfa',badge:'WEIGHT OF MEMORY'},
+
+  // === EP.4: 동료의 의미 ===
+  j4_start:{sp:'narrator',illus:'👥',bg:'battle',
+    txt:'왕들의 전쟁이 시작됐다.\n\n유중혁의 앞에 적이, 뒤에 동료가 섰다.\n\n이전 회차에선 없던 광경이었다.',
+    ch:[{t:'계속하기 ▶',n:'j4_s1',fx:{}}]},
+  j4_s1:{sp:'joonghyuk',illus:'⚔️',bg:'battle',
+    txt:'(등 뒤에 사람이 있다는 게 이런 느낌인가.)\n\n(이전 회차에선 몰랐다. 알 필요도 없었다.)\n\n(하지만 이번엔——)',
+    ch:[
+      {t:'동료를 지킨다',                n:'j4_a',fx:{trust:20},hint:'+신뢰도 20'},
+      {t:'함께 싸운다',                  n:'j4_b',fx:{trust:12,seolhwa:8},hint:'+신뢰도 12 +설화 8'},
+      {t:'앞서 나간다 — 혼자 감당한다',   n:'j4_c',fx:{seolhwa:15},hint:'+설화 15'},
+    ]},
+  j4_a:{sp:'joonghyuk',illus:'🛡️',bg:'battle',
+    txt:'물러서 있어.\n\n(이 정도는 혼자 할 수 있다.)\n\n(아니——이 사람들을 지키고 싶다. 처음으로.)',
+    ch:[{t:'계속하기 ▶',n:'j4_react',fx:{}}]},
+  j4_b:{sp:'joonghyuk',illus:'👥',bg:'battle',
+    txt:'......같이 가자.\n\n(나만 강하면 되는 게 아니었다.)\n\n(이 사람들과 함께 강해지는 거다.)',
+    ch:[{t:'계속하기 ▶',n:'j4_react',fx:{}}]},
+  j4_c:{sp:'joonghyuk',illus:'⚔️',bg:'battle',
+    txt:'닥쳐. 내가 끝낸다.\n\n(감정이 무기를 흔들게 해선 안 된다.)\n\n(내가 가장 강하다. 그러니까 내가 앞에 선다.)',
+    ch:[{t:'계속하기 ▶',n:'j4_react',fx:{}}]},
+  j4_react:{sp:'narrator',illus:'🌟',bg:'battle',
+    txt:'전장의 먼지가 가라앉았다.\n\n유중혁의 옆에 사람들이 서 있었다.\n\n1863번의 회귀 중 처음 보는 풍경.',
+    ch:[{t:'계속하기 ▶',n:'j4_final',fx:{trust:5}}]},
+  j4_final:{sp:'system',illus:'⭐',bg:'battle',
+    txt:'【 동료의 의미를 이해하기 시작합니다 】\n\n혼자 강한 것과 함께 강한 것은 다르다.',
+    ch:[{t:'Episode 4 클리어 ▶',n:'je',fx:{seolhwa:10}}]},
+  je:{clr:true,ending:'전우 엔딩',ep:4,next:'j5_start',
+    txt:'【 Episode 4 클리어 】\n\n등을 맡길 수 있는 사람이 생겼다.\n회귀자가 처음으로 발견한 것.',
+    col:'#f59e0b',badge:'COMRADE'},
+
+  // === EP.5: 최후의 회귀 ===
+  j5_start:{sp:'narrator',illus:'🌌',bg:'final',
+    txt:'최종 시나리오.\n\n유중혁 앞에 선택이 놓였다.\n\n1864번째 회귀의 기회. 아니면——',
+    ch:[{t:'계속하기 ▶',n:'j5_s1',fx:{}}]},
+  j5_s1:{sp:'system',illus:'⚡',bg:'final',
+    txt:'【 최종 시나리오 】\n\n회귀자여, 선택하십시오.\n\n시간을 되돌릴 것입니까, 이 세계에 남을 것입니까.',
+    ch:[{t:'계속하기 ▶',n:'j5_s2',fx:{}}]},
+  j5_s2:{sp:'joonghyuk',illus:'⚔️',bg:'final',
+    txt:'(1863번. 충분히 반복했다.)\n\n(이번 회차에서 나는 처음으로——)\n\n(잃고 싶지 않은 것이 생겼다.)',
+    ch:[
+      {t:'회귀한다 — 더 완벽한 결말을 위해',  n:'j5_a',fx:{seolhwa:20},hint:'+설화 20'},
+      {t:'이 세계에 남는다',                  n:'j5_b',fx:{trust:25},hint:'+신뢰도 25'},
+      {t:'새로운 길을 연다',                  n:'j5_c',fx:{trust:15,seolhwa:10},hint:'+신뢰도 15 +설화 10'},
+    ]},
+  j5_a:{sp:'joonghyuk',illus:'⚔️',bg:'final',
+    txt:'......미안하다.\n\n(아직 부족하다. 더 강해져야 한다.)\n\n(1864번째. 이번엔 반드시.)',
+    ch:[{t:'계속하기 ▶',n:'j5_react',fx:{}}]},
+  j5_b:{sp:'joonghyuk',illus:'👥',bg:'final',
+    txt:'......충분하다.\n\n(1863번이면 됐다.)\n\n(이번 회차의 사람들과 함께 끝내겠다.)',
+    ch:[{t:'계속하기 ▶',n:'j5_react',fx:{}}]},
+  j5_c:{sp:'joonghyuk',illus:'🌟',bg:'final',
+    txt:'회귀도, 정지도 아니다.\n\n나는 앞으로 간다.\n\n(김독자, 네가 말한 결말——직접 보여줘.)',
+    ch:[{t:'계속하기 ▶',n:'j5_react',fx:{}}]},
+  j5_react:{sp:'narrator',illus:'🌟',bg:'final',
+    txt:'시간의 흐름이 유중혁을 감쌌다.\n\n1863번의 회귀자가 내린 마지막 선택.\n\n그것은 이 세계의 미래를 바꿨다.',
+    ch:[{t:'계속하기 ▶',n:'j5_final',fx:{}}]},
+  j5_final:{sp:'system',illus:'⭐',bg:'final',
+    txt:'【 최종 시나리오 클리어 】\n\n유중혁. 가장 많이 반복한 자.\n\n그러나 마침내 멈춘 자.',
+    ch:[{t:'유중혁 루트 클리어 ▶',n:'jf',fx:{seolhwa:15}}]},
+  jf:{clr:true,ending:'회귀자 엔딩',ep:5,
+    txt:'【 유중혁 루트 완결 】\n\n1863번의 회귀.\n그 끝에서 찾은 것은 강함이 아니라 온기였다.\n\n★ 스타 스트림이 회귀자의 여정에 경의를 표합니다 ★',
+    col:'#ef4444',badge:'THE REGRESSOR'},
+};
+
+// =======================================
+// SCENES: 한수영
+// =======================================
+const SCENES_SY = {
+  // === EP.1 ===
+  s0:{sp:'narrator',illus:'✒️',bg:'subway',
+    txt:'한수영은 멸살법을 읽었다.\n\n정확히는——끝까지. 완결까지.\n\n그리고 세상이 바뀐 날, 그녀는 그 이야기 안에 있었다.',
+    ch:[{t:'계속하기 ▶',n:'s1',fx:{}}]},
+  s1:{sp:'sooyoung',illus:'✒️',bg:'dark',
+    txt:'김독자, 넌 네가 무슨 신인 줄 알지.\n\n세상엔 네가 모르는 것도 있어 멍청아.\n\n......나 같은 게.',
+    ch:[{t:'계속하기 ▶',n:'s2',fx:{}}]},
+  s2:{sp:'narrator',illus:'🔥',bg:'dark',
+    txt:'심연의 흑염룡.\n\n그 성좌가 한수영의 배후에서 조용히 웃고 있었다.\n\n이야기. 이야기가 힘이 된다.',
+    ch:[{t:'계속하기 ▶',n:'s3',fx:{}}]},
+  s3:{sp:'system',illus:'⚡',bg:'dark',
+    txt:'【 설화 수치가 증가합니다 】\n\n이야기를 쌓을수록 강해지는 자.\n\n당신의 무기는 언어입니다.',
+    ch:[
+      {t:'이야기를 쓴다 — 전투를 기록한다',  n:'s4a',fx:{seolhwa:20},hint:'+설화 20'},
+      {t:'직접 싸운다 — 흑염으로',           n:'s4b',fx:{trust:5},   hint:'+신뢰도 5'},
+    ]},
+  s4a:{sp:'sooyoung',illus:'✒️',bg:'dark',
+    txt:'(이 이야기를 써야 한다.)\n\n(아무도 기억 못 해도——내가 기억하면 된다.)\n\n(그게 내 싸우는 방법이니까.)',
+    ch:[{t:'계속하기 ▶',n:'ya',fx:{seolhwa:10}}]},
+  s4b:{sp:'sooyoung',illus:'🔥',bg:'dark',
+    txt:'장전.\n\n아니, 그건 이지혜 대사네.\n\n——흑염룡, 가자.',
+    ch:[{t:'계속하기 ▶',n:'yb',fx:{trust:10}}]},
+  ya:{clr:true,ending:'작가 엔딩',ep:1,next:'y2_start',
+    txt:'【 Episode 1 클리어 】\n\n이야기가 무기가 된다.\n설화의 길을 걷는 자.',
+    col:'#a78bfa',badge:'AUTHOR ROUTE'},
+  yb:{clr:true,ending:'흑염 엔딩',ep:1,next:'y2_start',
+    txt:'【 Episode 1 클리어 】\n\n흑염마황의 첫 번째 불꽃.\n말보다 행동으로.',
+    col:'#ef4444',badge:'BLACK FLAME ROUTE'},
+
+  // === EP.2: 흑염의 계약 ===
+  y2_start:{sp:'narrator',illus:'🔥',bg:'dark',
+    txt:'시나리오가 진행될수록 흑염룡의 목소리가 커졌다.\n\n한수영의 머릿속에서 이야기와 불꽃이 공존하고 있었다.',
+    ch:[{t:'계속하기 ▶',n:'y2_s1',fx:{}}]},
+  y2_s1:{sp:'sooyoung',illus:'✒️',bg:'dark',
+    txt:'(흑염룡은 내 배후 성좌다. 하지만——)\n\n(이 힘은 내 것인가, 성좌의 것인가.)\n\n(작가로서 나는 내 이야기를 써야 한다.)',
+    ch:[
+      {t:'흑염룡과의 계약을 강화한다',     n:'y2_a',fx:{seolhwa:15,coin:20},hint:'+설화 15 +코인 20'},
+      {t:'독립을 선언한다',               n:'y2_b',fx:{trust:12,seolhwa:8},hint:'+신뢰도 12 +설화 8'},
+      {t:'공존의 길을 찾는다',            n:'y2_c',fx:{trust:10,seolhwa:10},hint:'+신뢰도 10 +설화 10'},
+    ]},
+  y2_a:{sp:'sooyoung',illus:'🔥',bg:'dark',
+    txt:'흑염룡. 더 많은 힘을 줘.\n\n(이 이야기를 끝내려면 네 불꽃이 필요해.)\n\n(계약 조건? 좋아, 받아들이겠어.)',
+    ch:[{t:'계속하기 ▶',n:'y2_react',fx:{}}]},
+  y2_b:{sp:'sooyoung',illus:'✒️',bg:'dark',
+    txt:'미안, 흑염룡. 나는 네 종이 아니야.\n\n나는 작가야. 내 이야기는 내가 쓴다.\n\n(성흔 없이도 싸울 수 있어.)',
+    ch:[{t:'계속하기 ▶',n:'y2_react',fx:{}}]},
+  y2_c:{sp:'sooyoung',illus:'🤝',bg:'dark',
+    txt:'흑염룡, 거래하자.\n\n너의 불꽃과 나의 이야기. 둘 다 살리는 방법이 있어.\n\n(공존. 그게 최선이야.)',
+    ch:[{t:'계속하기 ▶',n:'y2_react',fx:{}}]},
+  y2_react:{sp:'narrator',illus:'🔥',bg:'dark',
+    txt:'심연의 흑염룡이 낮게 웃었다.\n\n한수영의 이야기가 또 하나의 장을 넘겼다.',
+    ch:[{t:'계속하기 ▶',n:'y2_final',fx:{trust:5}}]},
+  y2_final:{sp:'system',illus:'⭐',bg:'dark',
+    txt:'【 성좌와의 관계가 변화합니다 】\n\n이야기를 쓰는 자와 불꽃을 주는 자의 인연.',
+    ch:[{t:'Episode 2 클리어 ▶',n:'yc',fx:{seolhwa:10}}]},
+  yc:{clr:true,ending:'계약 엔딩',ep:2,next:'y3_start',
+    txt:'【 Episode 2 클리어 】\n\n흑염룡과의 관계가 정의되었다.\n작가는 자신의 길을 찾아간다.',
+    col:'#ef4444',badge:'FLAME CONTRACT'},
+
+  // === EP.3: 이야기의 무게 ===
+  y3_start:{sp:'narrator',illus:'📚',bg:'city',
+    txt:'깃발 쟁탈전 이후.\n\n한수영이 쓴 이야기들이 현실에 영향을 미치기 시작했다.\n\n설화의 힘이 점점 커지고 있었다.',
+    ch:[{t:'계속하기 ▶',n:'y3_s1',fx:{}}]},
+  y3_s1:{sp:'sooyoung',illus:'✒️',bg:'city',
+    txt:'(내가 쓰면 현실이 된다.)\n\n(이 힘은——무섭다.)\n\n(작가의 한마디가 누군가의 운명을 바꾸는 거니까.)',
+    ch:[
+      {t:'이야기를 계속 쓴다',            n:'y3_a',fx:{seolhwa:18},hint:'+설화 18'},
+      {t:'잠시 펜을 내려놓는다',           n:'y3_b',fx:{trust:15},hint:'+신뢰도 15'},
+      {t:'다른 사람의 이야기를 듣는다',     n:'y3_c',fx:{trust:10,seolhwa:8},hint:'+신뢰도 10 +설화 8'},
+    ]},
+  y3_a:{sp:'sooyoung',illus:'✒️',bg:'city',
+    txt:'멈출 수 없어. 이야기를 멈추면 사람들이 죽어.\n\n내 이야기가 이 세계를 지탱하고 있어.\n\n(......피곤하다. 하지만 써야 해.)',
+    ch:[{t:'계속하기 ▶',n:'y3_react',fx:{}}]},
+  y3_b:{sp:'sooyoung',illus:'🌙',bg:'city',
+    txt:'(......)\n\n(잠깐이라도 쉬고 싶다.)\n\n(작가도 사람이야. 매일 이야기를 쓸 순 없어.)',
+    ch:[{t:'계속하기 ▶',n:'y3_react',fx:{}}]},
+  y3_c:{sp:'sooyoung',illus:'👥',bg:'city',
+    txt:'김독자. 네 이야기를 들려줘.\n\n나만 쓰는 게 아니라, 듣는 것도 중요하잖아.\n\n(작가는 경청하는 사람이어야 해.)',
+    ch:[{t:'계속하기 ▶',n:'y3_react',fx:{}}]},
+  y3_react:{sp:'narrator',illus:'📖',bg:'city',
+    txt:'한수영의 펜에서 빛이 났다.\n\n이야기의 무게를 이해한 자만이 쓸 수 있는 빛.',
+    ch:[{t:'계속하기 ▶',n:'y3_final',fx:{trust:5}}]},
+  y3_final:{sp:'system',illus:'⭐',bg:'city',
+    txt:'【 설화의 경지가 한 단계 올라갑니다 】\n\n이야기의 무게를 아는 자, 그것이 진정한 작가.',
+    ch:[{t:'Episode 3 클리어 ▶',n:'yd',fx:{seolhwa:12}}]},
+  yd:{clr:true,ending:'각성 엔딩',ep:3,next:'y4_start',
+    txt:'【 Episode 3 클리어 】\n\n이야기의 무게를 짊어진 작가.\n설화의 진정한 의미를 깨달았다.',
+    col:'#a78bfa',badge:'AWAKENED AUTHOR'},
+
+  // === EP.4: 작가의 결단 ===
+  y4_start:{sp:'narrator',illus:'✒️',bg:'palace',
+    txt:'왕들의 전쟁 한가운데.\n\n한수영의 이야기가 전장의 흐름을 바꾸고 있었다.\n\n작가의 펜은 왕의 검보다 강했다.',
+    ch:[{t:'계속하기 ▶',n:'y4_s1',fx:{}}]},
+  y4_s1:{sp:'sooyoung',illus:'✒️',bg:'palace',
+    txt:'(이 전쟁의 결말을 내가 쓸 수 있다.)\n\n(해피엔딩? 비극? 열린 결말?)\n\n(작가의 결단이 필요한 순간이야.)',
+    ch:[
+      {t:'해피엔딩을 쓴다',              n:'y4_a',fx:{trust:18,seolhwa:5},hint:'+신뢰도 18 +설화 5'},
+      {t:'비극을 쓴다 — 현실적으로',      n:'y4_b',fx:{seolhwa:20},hint:'+설화 20'},
+      {t:'열린 결말 — 독자에게 맡긴다',   n:'y4_c',fx:{trust:10,seolhwa:12},hint:'+신뢰도 10 +설화 12'},
+    ]},
+  y4_a:{sp:'sooyoung',illus:'🌟',bg:'palace',
+    txt:'모두가 살아남는 이야기를 쓰겠어.\n\n비현실적이라고? 그래서 이야기인 거야.\n\n(현실에선 불가능한 것을 가능하게 하는 게 작가니까.)',
+    ch:[{t:'계속하기 ▶',n:'y4_react',fx:{}}]},
+  y4_b:{sp:'sooyoung',illus:'✒️',bg:'palace',
+    txt:'누군가는 죽어야 해. 이야기에는 무게가 필요해.\n\n비극 없는 서사는 거짓말이야.\n\n(......미안해. 하지만 이게 정직한 이야기야.)',
+    ch:[{t:'계속하기 ▶',n:'y4_react',fx:{}}]},
+  y4_c:{sp:'sooyoung',illus:'📖',bg:'palace',
+    txt:'나는 결말을 쓰지 않겠어.\n\n이 이야기의 결말은 독자들이 정하는 거야.\n\n(작가는 길을 열어주는 사람이야. 강요하는 사람이 아니라.)',
+    ch:[{t:'계속하기 ▶',n:'y4_react',fx:{}}]},
+  y4_react:{sp:'narrator',illus:'🌟',bg:'palace',
+    txt:'한수영의 이야기가 전장 위로 퍼져나갔다.\n\n작가의 결단. 그것이 세계의 흐름을 바꿨다.',
+    ch:[{t:'계속하기 ▶',n:'y4_final',fx:{trust:5}}]},
+  y4_final:{sp:'system',illus:'⭐',bg:'palace',
+    txt:'【 작가의 결단이 세계에 영향을 미칩니다 】\n\n펜은 검보다 강하다. 그것이 증명되었다.',
+    ch:[{t:'Episode 4 클리어 ▶',n:'ye',fx:{seolhwa:12}}]},
+  ye:{clr:true,ending:'결단 엔딩',ep:4,next:'y5_start',
+    txt:'【 Episode 4 클리어 】\n\n작가로서의 결단을 내렸다.\n이야기의 방향이 결정되었다.',
+    col:'#a78bfa',badge:'AUTHOR\'S RESOLVE'},
+
+  // === EP.5: 최후의 이야기 ===
+  y5_start:{sp:'narrator',illus:'📖',bg:'final',
+    txt:'최종 시나리오.\n\n한수영은 마지막 페이지 앞에 서 있었다.\n\n이 세계의 이야기를 완결할 시간.',
+    ch:[{t:'계속하기 ▶',n:'y5_s1',fx:{}}]},
+  y5_s1:{sp:'system',illus:'⚡',bg:'final',
+    txt:'【 최종 시나리오 】\n\n작가여, 마지막 이야기를 쓰십시오.\n\n당신의 펜이 이 세계의 결말을 결정합니다.',
+    ch:[{t:'계속하기 ▶',n:'y5_s2',fx:{}}]},
+  y5_s2:{sp:'sooyoung',illus:'✒️',bg:'final',
+    txt:'(이 이야기의 마지막 문장을 써야 해.)\n\n(14년간의 멸살법. 지금 이 순간의 현실.)\n\n(내가 어떤 마침표를 찍을 건가.)',
+    ch:[
+      {t:'모든 이야기를 하나로 엮는다',    n:'y5_a',fx:{trust:20,seolhwa:10},hint:'+신뢰도 20 +설화 10'},
+      {t:'나만의 이야기를 완성한다',       n:'y5_b',fx:{seolhwa:25},hint:'+설화 25'},
+      {t:'이야기를 끝내지 않는다',         n:'y5_c',fx:{trust:15,seolhwa:8},hint:'+신뢰도 15 +설화 8'},
+    ]},
+  y5_a:{sp:'sooyoung',illus:'📖',bg:'final',
+    txt:'김독자의 이야기. 유중혁의 이야기. 모든 사람의 이야기.\n\n나는 그것을 하나로 엮겠어.\n\n(이게 작가의 최종 무기야——모든 서사를 통합하는 것.)',
+    ch:[{t:'계속하기 ▶',n:'y5_react',fx:{}}]},
+  y5_b:{sp:'sooyoung',illus:'✒️',bg:'final',
+    txt:'이건 내 이야기야.\n\n한수영이라는 작가가 쓰는, 세상에 단 하나뿐인 이야기.\n\n(다른 누구도 아닌, 나의 결말을 쓰겠어.)',
+    ch:[{t:'계속하기 ▶',n:'y5_react',fx:{}}]},
+  y5_c:{sp:'sooyoung',illus:'🌟',bg:'final',
+    txt:'이야기에 끝은 없어.\n\n「완」이라고 써도, 독자의 마음속에서 이야기는 계속돼.\n\n(그러니까 나는 마침표 대신 쉼표를 찍겠어.)',
+    ch:[{t:'계속하기 ▶',n:'y5_react',fx:{}}]},
+  y5_react:{sp:'narrator',illus:'🌟',bg:'final',
+    txt:'한수영의 펜에서 빛이 폭발했다.\n\n모든 이야기가 하나의 빛으로 수렴했다.\n\n작가의 마지막 문장이 세계를 감쌌다.',
+    ch:[{t:'계속하기 ▶',n:'y5_final',fx:{}}]},
+  y5_final:{sp:'system',illus:'⭐',bg:'final',
+    txt:'【 최종 시나리오 클리어 】\n\n한수영. 이야기를 무기로 삼은 작가.\n\n당신의 펜이 이 세계를 구했다.',
+    ch:[{t:'한수영 루트 클리어 ▶',n:'yf',fx:{seolhwa:15}}]},
+  yf:{clr:true,ending:'작가 최종 엔딩',ep:5,
+    txt:'【 한수영 루트 완결 】\n\n이야기는 끝나지 않는다.\n작가가 펜을 놓아도, 독자가 기억하는 한.\n\n★ 스타 스트림이 당신의 이야기에 박수를 보냅니다 ★',
+    col:'#a78bfa',badge:'THE AUTHOR'},
+};
+
+// --- TRUE / BAD ENDING (shared) ---
+const TRUE_ENDING = {
+  txt:'【 진 엔딩 — 전지적 독자시점 】\n\n세 사람의 이야기가 하나로 합쳐졌다.\n\n김독자의 전략, 유중혁의 의지, 한수영의 서사.\n그것이 이 세계의 진짜 결말이었다.\n\n★ 가장 완벽한 이야기는 혼자 쓸 수 없다 ★',
+  col:'#fcd34d',badge:'OMNISCIENT READER\'S VIEWPOINT — TRUE END'
+};
+const BAD_ENDING = {
+  txt:'【 배드 엔딩 — 고독한 독자 】\n\n모든 선택에서 혼자를 택한 자.\n\n이야기는 있었으나, 들어줄 사람이 없었다.\n\n성좌들이 침묵한다.',
+  col:'#64748b',badge:'SOLITARY READER — BAD END'
+};
+
+const ALL_SCENES = {
+  dokja: SCENES_DOKJA,
+  joonghyuk: SCENES_JH,
+  sooyoung: SCENES_SY,
+};
+
+// =======================================
+// STATE
+// =======================================
+let state = {
+  phase: 'title',
+  char: 'dokja',
+  scenes: SCENES_DOKJA,
+  sceneId: 's0',
+  ep: 1,
+  stats: { trust:0, seolhwa:0, coin:100 },
+  constellation: 0,
+  solitaryCount: 0,
+  dispTxt: '',
+  typing: false,
+  choicesOn: false,
+  lastClear: null,
+};
+let typingTimer = null;
+let constTimer = null;
+
+// Persistent completion data
+function getSaveData() {
+  try { return JSON.parse(localStorage.getItem('orv_save') || '{}'); } catch(e) { return {}; }
+}
+function setSaveData(d) {
+  try { localStorage.setItem('orv_save', JSON.stringify(d)); } catch(e) {}
+}
+
+// =======================================
+// INIT
+// =======================================
+function init() {
+  buildStars();
+  buildCharCards();
+  showScreen('title');
+  checkTrueEndHint();
+
+  document.getElementById('start-btn').onclick = startGame;
+  document.getElementById('retry-btn').onclick = () => { showScreen('title'); checkTrueEndHint(); buildCharCards(); };
+  document.getElementById('next-ep-btn').onclick = continueNextEp;
+}
+
+function buildStars() {
+  const layer = document.getElementById('stars-layer');
+  layer.innerHTML = '';
+  for (let i=0; i<24; i++) {
+    const s = document.createElement('div');
+    s.className = 'star';
+    const sz = Math.random()*2.5+0.5;
+    s.style.cssText = `width:${sz}px;height:${sz}px;left:${Math.random()*100}%;top:${Math.random()*100}%;animation-delay:${Math.random()*4}s;animation-duration:${2+Math.random()*4}s;opacity:0.15`;
+    layer.appendChild(s);
+  }
+}
+
+function buildCharCards() {
+  const wrap = document.getElementById('char-cards');
+  wrap.innerHTML = '';
+  const save = getSaveData();
+  Object.entries(CHARS).forEach(([id, ch]) => {
+    const card = document.createElement('div');
+    card.className = 'char-card' + (id === state.char ? ' selected' : '');
+    card.dataset.id = id;
+    const completed = save[id] && save[id].completed;
+    card.innerHTML = `
+      <div style="font-size:28px;margin-bottom:8px">${ch.illus}</div>
+      <div class="char-card-name" style="color:${ch.col}">${ch.name}</div>
+      <div class="char-card-desc">${ch.desc}</div>
+      ${completed ? '<div class="char-badge">CLEAR</div>' : ''}
+    `;
+    card.onclick = () => {
+      document.querySelectorAll('.char-card').forEach(c=>c.classList.remove('selected'));
+      card.classList.add('selected');
+      state.char = id;
+    };
+    wrap.appendChild(card);
+  });
+}
+
+function checkTrueEndHint() {
+  const save = getSaveData();
+  const allDone = ['dokja','joonghyuk','sooyoung'].every(c => save[c] && save[c].completed && save[c].trust >= 70);
+  const hint = document.getElementById('true-end-hint');
+  if (allDone) {
+    hint.style.display = 'block';
+    hint.textContent = '★ 진 엔딩 해금! 아무 캐릭터로 시작하세요 ★';
+    hint.style.color = '#fcd34d';
+  } else {
+    const cleared = ['dokja','joonghyuk','sooyoung'].filter(c => save[c] && save[c].completed && save[c].trust >= 70).length;
+    if (cleared > 0) {
+      hint.style.display = 'block';
+      hint.textContent = `진 엔딩 조건: ${cleared}/3 캐릭터 클리어 (신뢰도 70+)`;
+    } else {
+      hint.style.display = 'none';
+    }
+  }
+}
+
+function showScreen(screen) {
+  document.getElementById('title-screen').style.display = screen==='title' ? 'flex' : 'none';
+  document.getElementById('game-screen').style.display  = screen==='game'  ? 'flex' : 'none';
+  document.getElementById('clear-screen').style.display = screen==='clear' ? 'flex' : 'none';
+}
+
+// =======================================
+// GAME
+// =======================================
+function startGame() {
+  state.scenes  = ALL_SCENES[state.char];
+  state.sceneId = 's0';
+  state.ep      = 1;
+  state.stats   = { trust:0, seolhwa:0, coin:100 };
+  state.constellation = 0;
+  state.solitaryCount = 0;
+  state.phase   = 'game';
+  state.lastClear = null;
+  showScreen('game');
+  updateEpInfo();
+  loadScene('s0');
+}
+
+function continueNextEp() {
+  if (!state.lastClear || !state.lastClear.next) return;
+  const nextScene = state.lastClear.next;
+  state.ep++;
+  state.phase = 'game';
+  showScreen('game');
+  updateEpInfo();
+  loadScene(nextScene);
+}
+
+function updateEpInfo() {
+  document.getElementById('ep-info').textContent = 'EP.' + state.ep;
+  document.getElementById('footer-bar').textContent = `전지적 독자시점 팬게임 . EP.${state.ep} . 원작: 싱숑`;
+}
+
+function loadScene(id) {
+  if (typingTimer) { clearInterval(typingTimer); typingTimer = null; }
+
+  state.sceneId   = id;
+  state.dispTxt   = '';
+  state.typing    = true;
+  state.choicesOn = false;
+
+  const sc = state.scenes[id];
+  if (!sc) return;
+
+  // Speaker name
+  const nameEl = document.getElementById('speaker-name');
+  const spMap = {
+    dokja:    {name:'김독자',  col:'#f59e0b'},
+    joonghyuk:{name:'유중혁',  col:'#ef4444'},
+    sooyoung: {name:'한수영',  col:'#a78bfa'},
+    narrator: {name:'',       col:'#94a3b8'},
+    system:   {name:'SYSTEM', col:'#22d3ee'},
+  };
+  const spInfo = spMap[sc.sp] || spMap.narrator;
+  if (spInfo.name) {
+    const label = sc.sp==='system' ? `【 ${spInfo.name} 】` : spInfo.name;
+    nameEl.textContent = label;
+    nameEl.style.display = 'inline-flex';
+    nameEl.style.color = spInfo.col;
+    nameEl.style.borderColor = spInfo.col+'55';
+  } else {
+    nameEl.style.display = 'none';
+  }
+
+  // Scene illus & bg
+  document.getElementById('scene-illus').textContent = sc.illus || '📖';
+  const overlay = document.getElementById('bg-overlay');
+  overlay.className = 'bg-overlay bg-' + (sc.bg || 'dark');
+
+  const isSystem = sc.sp === 'system';
+  document.getElementById('dialog-text').style.fontFamily = isSystem ? "'Courier New',monospace" : "'Noto Serif KR',serif";
+  document.getElementById('dialog-text').style.color = isSystem ? '#22d3ee' : '#e0dbd2';
+
+  // Hide choices
+  const cw = document.getElementById('choices-wrap');
+  cw.style.display = 'none';
+  cw.innerHTML = '';
+
+  // Typing
+  document.getElementById('skip-hint').style.opacity = '1';
+  const full = sc.txt;
+  let i = 0;
+  typingTimer = setInterval(() => {
+    i++;
+    state.dispTxt = full.slice(0, i);
+    renderText();
+    if (i >= full.length) {
+      clearInterval(typingTimer); typingTimer = null;
+      state.typing = false;
+      state.choicesOn = true;
+      document.getElementById('skip-hint').style.opacity = '0';
+      showChoices();
+    }
+  }, 26);
+
+  updateHUD();
+
+  // Constellation popup chance
+  maybeShowConstellation();
+}
+
+function renderText() {
+  const el = document.getElementById('dialog-text');
+  const lines = state.dispTxt.split('\n');
+  let html = lines.map((l,i)=>l+(i<lines.length-1?'<br>':'')).join('');
+  if (state.typing) html += '<span id="cursor-blink">|</span>';
+  el.innerHTML = html;
+}
+
+function skipTyping() {
+  if (!state.typing) return;
+  if (typingTimer) { clearInterval(typingTimer); typingTimer = null; }
+  const sc = state.scenes[state.sceneId];
+  state.dispTxt = sc.txt;
+  state.typing = false;
+  state.choicesOn = true;
+  document.getElementById('skip-hint').style.opacity = '0';
+  renderText();
+  showChoices();
+}
+
+function showChoices() {
+  const sc = state.scenes[state.sceneId];
+  if (!sc || sc.ch.length === 0) return;
+  const cw = document.getElementById('choices-wrap');
+  cw.innerHTML = '';
+  sc.ch.forEach((c, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'choice-btn';
+    btn.style.animationDelay = `${i*0.07}s`;
+    btn.innerHTML = `<span class="choice-arrow">▷</span>${c.t}${c.hint?`<span class="choice-fx">${c.hint}</span>`:''}`;
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      handleChoice(c);
+    });
+    cw.appendChild(btn);
+  });
+  cw.style.display = 'flex';
+}
+
+function handleChoice(choice) {
+  if (choice.fx) {
+    const f = choice.fx;
+    state.stats.trust   = Math.min(100, Math.max(0, state.stats.trust   + (f.trust   ||0)));
+    state.stats.seolhwa = Math.min(100, Math.max(0, state.stats.seolhwa + (f.seolhwa ||0)));
+    state.stats.coin    = Math.max(0,               state.stats.coin    + (f.coin    ||0));
+  }
+
+  // Track solitary choices
+  if (choice.t.includes('혼자') || choice.t.includes('모른 척') || choice.t.includes('거리를 유지') || choice.t.includes('앞서 나간다') || choice.t.includes('기억을 잠근다')) {
+    state.solitaryCount++;
+  }
+
+  updateHUD();
+  const next = state.scenes[choice.n];
+  if (next && next.clr) {
+    goToClear(choice.n, next);
+  } else if (next) {
+    loadScene(choice.n);
+  }
+}
+
+// =======================================
+// CLEAR / ENDING
+// =======================================
+function goToClear(id, sc) {
+  if (typingTimer) { clearInterval(typingTimer); typingTimer = null; }
+  if (constTimer) { clearTimeout(constTimer); constTimer = null; }
+
+  state.lastClear = sc;
+
+  // Check for bad ending
+  if (state.solitaryCount >= 5 && sc.ep === 5) {
+    showSpecialEnding(BAD_ENDING, 'BAD');
+    return;
+  }
+
+  // Check for true ending
+  if (sc.ep === 5) {
+    // Save completion data
+    const save = getSaveData();
+    save[state.char] = { completed: true, trust: state.stats.trust };
+    setSaveData(save);
+
+    const allDone = ['dokja','joonghyuk','sooyoung'].every(c => save[c] && save[c].completed && save[c].trust >= 70);
+    if (allDone && state.stats.trust >= 70) {
+      showSpecialEnding(TRUE_ENDING, 'TRUE');
+      return;
+    }
+  }
+
+  document.getElementById('final-trust').textContent   = state.stats.trust;
+  document.getElementById('final-seolhwa').textContent = state.stats.seolhwa;
+  document.getElementById('final-coin').textContent    = state.stats.coin;
+  document.getElementById('clear-msg').textContent     = sc.txt;
+  const badge = document.getElementById('ending-badge');
+  badge.textContent = sc.badge || '';
+  badge.style.background = (sc.col||'#f59e0b') + '22';
+  badge.style.color = sc.col || '#f59e0b';
+  badge.style.border = '1px solid ' + (sc.col||'#f59e0b') + '66';
+  document.getElementById('clear-title').textContent = sc.ending || '클리어!';
+
+  // Dynamic EP label
+  const epLabel = sc.ep ? `EPISODE ${sc.ep}` : 'EPISODE 1';
+  document.getElementById('clear-ep-label').textContent = epLabel;
+
+  // Show/hide next episode button
+  const nextBtn = document.getElementById('next-ep-btn');
+  if (sc.next) {
+    nextBtn.style.display = 'inline-block';
+    nextBtn.textContent = `Episode ${(sc.ep||1)+1} 시작 ▶`;
+  } else {
+    nextBtn.style.display = 'none';
+  }
+
+  showScreen('clear');
+}
+
+function showSpecialEnding(ending, type) {
+  document.getElementById('final-trust').textContent   = state.stats.trust;
+  document.getElementById('final-seolhwa').textContent = state.stats.seolhwa;
+  document.getElementById('final-coin').textContent    = state.stats.coin;
+  document.getElementById('clear-msg').textContent     = ending.txt;
+
+  const badge = document.getElementById('ending-badge');
+  badge.textContent = ending.badge;
+  badge.style.background = ending.col + '22';
+  badge.style.color = ending.col;
+  badge.style.border = '1px solid ' + ending.col + '66';
+
+  document.getElementById('clear-title').textContent = type === 'TRUE' ? '진 엔딩' : '배드 엔딩';
+  document.getElementById('clear-ep-label').textContent = type === 'TRUE' ? 'TRUE ENDING' : 'BAD ENDING';
+  document.getElementById('clear-star').textContent = type === 'TRUE' ? '★' : '☆';
+  document.getElementById('next-ep-btn').style.display = 'none';
+
+  showScreen('clear');
+}
+
+// =======================================
+// CONSTELLATION SYSTEM
+// =======================================
+function maybeShowConstellation() {
+  if (Math.random() > 0.3) return; // 30% chance
+  const popup = document.getElementById('constellation-popup');
+  const c = CONSTELLATIONS[Math.floor(Math.random() * CONSTELLATIONS.length)];
+
+  document.getElementById('const-msg').textContent = c.msg;
+  if (c.coin > 0) {
+    state.stats.coin += c.coin;
+    state.constellation += 5;
+    document.getElementById('const-coin').textContent = `+${c.coin} 코인 후원`;
+    document.getElementById('const-coin').style.display = 'block';
+    updateHUD();
+  } else {
+    document.getElementById('const-coin').style.display = 'none';
+    state.constellation += 2;
+  }
+  document.getElementById('const-favor').textContent = `성좌 호감도: ${state.constellation}`;
+
+  popup.classList.remove('hiding');
+  popup.style.display = 'block';
+
+  if (constTimer) clearTimeout(constTimer);
+  constTimer = setTimeout(() => {
+    popup.classList.add('hiding');
+    setTimeout(() => { popup.style.display = 'none'; popup.classList.remove('hiding'); }, 300);
+  }, 2800);
+}
+
+// =======================================
+// HUD
+// =======================================
+function updateHUD() {
+  document.getElementById('bar-trust').style.width   = state.stats.trust + '%';
+  document.getElementById('bar-seolhwa').style.width = state.stats.seolhwa + '%';
+  document.getElementById('val-trust').textContent   = state.stats.trust;
+  document.getElementById('val-seolhwa').textContent = state.stats.seolhwa;
+  document.getElementById('val-coin').textContent    = '◈ ' + state.stats.coin;
+}
+
+// expose skipTyping globally (called from onclick)
+window.skipTyping = skipTyping;
+
+init();
+</script>
+</body>
+</html>
